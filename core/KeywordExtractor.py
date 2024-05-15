@@ -1,9 +1,11 @@
 from keybert import KeyBERT
+import nltk
+from transformers import pipeline 
+import re
 
-
-class KeywordExtractor():
-    def __init__(self):
-        self.pipe = pipeline("token-classification", model="eventdata-utd/conflibert-named-entity-recognition", tokenizer="eventdata-utd/conflibert-named-entity-recognition")
+class KeywordExtractor:
+    def __init__(self, model_name="eventdata-utd/conflibert-named-entity-recognition"):
+        self.pipe = pipeline("token-classification", model=model_name, tokenizer=model_name)
         self.kw_model = KeyBERT()
         self.stopwords = set(nltk.corpus.stopwords.words('english'))
         self.semantic_matcher = None
@@ -33,12 +35,15 @@ class KeywordExtractor():
             return filtered_words
         return wrapper
 
-    @remove_stopwords 
-    @sanitize_and_repair
+    # @remove_stopwords 
+    # @sanitize_and_repair
     def extract_named_entities(self, doc):
         results = self.pipe(doc)
+        print(results)
         named_entities = []
-        for i, result in enumerate(results):
+        i = 0
+        while i < len(results):
+            result = results[i]
             if result["entity"] != "O" and result["entity"].split("-")[1] not in ["Quantity","Temporal","Money"]:
                 if "B-" in result["entity"]:
                     j = i + 1
@@ -46,13 +51,27 @@ class KeywordExtractor():
                         if "B-" in results[j]["entity"]:
                             break
                         j +=1
-                    named_entities.append(" ".join(results[x]["word"] for x in range(i,j)))
+                    
+                    full_word = []
+                    for x in range(i,j):
+                        w = results[x]["word"]
+                        if "##" in w:
+                            if full_word:
+                                full_word[-1] = full_word[-1] + re.sub(r'[#]', '', w)
+                            else:
+                                full_word.append(re.sub(r'[#]', '', w))
+                        else:
+                            full_word.append(w)
+                    
+                    named_entities.append(" ".join(full_word))
+                    i = j-1
+            i += 1
         return named_entities
         
    
 
-    @sanitize_and_repair
-    @remove_stopwords
+    # @sanitize_and_repair
+    # @remove_stopwords
     def extract_keywords(self, doc):
         return [k[0] for k in self.kw_model.extract_keywords(doc)]
     
