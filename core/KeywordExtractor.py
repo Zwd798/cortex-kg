@@ -39,7 +39,6 @@ class KeywordExtractor:
     # @sanitize_and_repair
     def extract_named_entities(self, doc):
         results = self.pipe(doc)
-        print(results)
         named_entities = []
         i = 0
         while i < len(results):
