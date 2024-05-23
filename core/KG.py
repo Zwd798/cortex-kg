@@ -1,3 +1,4 @@
+from typing import List
 class KG:
     def __init__(self):
         self.triplets = []
