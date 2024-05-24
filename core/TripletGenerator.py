@@ -6,7 +6,7 @@ import re
 
 class TripletGenerator:
 
-    def __init__(self, text : str, s : SemanticSimilarity, e : KeywordExtractor, doc_name : str, template=None):
+    def __init__(self, text : str, s : SemanticSimilarity, e : KeywordExtractor, doc_name : str, named_entities, template=None, ):
         self.s = s
         self.e = e
         self.doc_name = doc_name
@@ -28,8 +28,9 @@ class TripletGenerator:
              
             ###The text is:
             {self.text}"""
-        
+        self.named_entities = named_entities
         self.triplets = self._extract_triplets()
+        
 
     def _get_entities_in_phrase(self, phrase) -> List:
         results = self.e.extract_named_entities(phrase)
@@ -68,7 +69,7 @@ class TripletGenerator:
         results = []
         for s in subj_nouns:
             for o in obj_nouns:
-                s,rel,o = self.refine(s),self.refine(rel),self.refine(o)
+                # s,rel,o = self.refine(s),self.refine(rel),self.refine(o)
                 results.append((s,rel,o))
         return results
 
@@ -98,9 +99,31 @@ class TripletGenerator:
     
     def _extract_triplets(self):
         triplet_results = []
+        self.template = f"""Task:Given the entities {self.named_entities}, generate triplets based on it if the entity exists in the passage. if it does not exist, reply with 'None'. For each triplet, mention the text from which the triplet was extracted
+            ###Instructions:
+            The triplet should be in the format (<subject>, <relation type>, <object>), where the subject must be one of the entities in {self.named_entities}.
+            The object should refer to a specific entity.
+            The relation type should refer to an action.
+            The text should be the paragraph from where the triplet was extracted. Just extract the sentence verbatim and do not make modifications
         
+
+         ###Example answer:
+         Entity: A
+         Text: A started liking B
+         (A, likes, B)
+
+         Entity: X
+         Text: A started liking B
+         None
+         
+         
+        ###The text is:
+        {self.text}"""
         response = ollama.generate(model=self.model_name, prompt=self.template)
+        print(response)
         for line in response['response'].split("\n"):
+            if 'None' in line:
+                continue
             matches = re.findall(self.pattern, line)
             matches_text = re.findall(self.pattern_text, line)
             if not matches:
