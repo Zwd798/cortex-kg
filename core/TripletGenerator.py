@@ -14,9 +14,7 @@ class TripletGenerator:
         self.pattern = r"\((.*?)\)"
         self.pattern_text = r"Text:\s(.*)"
         self.model_name = "mistral"
-        if template: self.template = template
-        else:
-            self.template = f"""Task:Generate triplets from the following text. For each triplet, mention the text from which the triplet was extracted
+        self.template = f"""Task:Generate triplets from the following text. For each triplet, mention the text from which the triplet was extracted
                 ###Instructions:
                 The triplet should be in the format (<subject>, <relation type>, <object>)
                 The subject and object should refer to specific entities.
