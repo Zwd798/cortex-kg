@@ -6,7 +6,7 @@ import re
 
 class TripletGenerator:
 
-    def __init__(self, text : str, s : SemanticSimilarity, e : KeywordExtractor, doc_name : str):
+    def __init__(self, text : str, s : SemanticSimilarity, e : KeywordExtractor, doc_name : str, template=None):
         self.s = s
         self.e = e
         self.doc_name = doc_name
@@ -14,12 +14,14 @@ class TripletGenerator:
         self.pattern = r"\((.*?)\)"
         self.pattern_text = r"Text:\s(.*)"
         self.model_name = "mistral"
-        self.template = f"""Task:Generate triplets from the following text. For each triplet, mention the text from which the triplet was extracted
-            ###Instructions:
-            The triplet should be in the format (<subject>, <relation type>, <object>)
-            The subject and object should refer to specific entities.
-            The relation type should refer to an action.
-            The text should be the paragraph from where the triplet was extracted. Just extract the sentence verbatim and do not make modifications
+        if template: self.template = template
+        else:
+            self.template = f"""Task:Generate triplets from the following text. For each triplet, mention the text from which the triplet was extracted
+                ###Instructions:
+                The triplet should be in the format (<subject>, <relation type>, <object>)
+                The subject and object should refer to specific entities.
+                The relation type should refer to an action.
+                The text should be the paragraph from where the triplet was extracted. Just extract the sentence verbatim and do not make modifications
             
 
              ###Example answer:
