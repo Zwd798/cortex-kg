@@ -109,10 +109,9 @@ class Search:
                 graph_entity = self.s.get_most_similar_entity(k)
                 if graph_entity:
                     print('the graph entity is')
-                    graph_entity = re.sub(r'[^a-zA-Z_\s]', '', graph_entity)
-                    graph_entity = re.sub(r' ', '_', graph_entity)
+                    print(graph_entity)
                     if graph_entity != "":
-                        nodes = self.graph.run(f"MATCH p = (n:{graph_entity})-[r]-(m) WHERE type(r) = 'filepath' RETURN p,r['text'] as text, type(r) as relationType ").data()
+                        nodes = self.graph.run(f"MATCH p = (n:`{graph_entity}`)-[r]-(m) WHERE type(r) = 'filepath' RETURN p,r['text'] as text, type(r) as relationType ").data()
                         for n in nodes:
                             if n['text'] not in already_found:
                                 all_texts.append(n["text"])
