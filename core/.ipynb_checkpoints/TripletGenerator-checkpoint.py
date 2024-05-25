@@ -138,7 +138,7 @@ class TripletGenerator:
             
             subj,rel,obj = triplet[0]," ".join(triplet[1:-1]), triplet[-1]
             subj,rel,obj = self._link_entities(subj, rel, obj)
-            refined_triplets = self._refine_triplets(subj,rel,obj)
+            refined_triplets = [(subj, rel, obj)]
             # refined_triplets = self._add_doc_name_to_triplets(refined_triplets)
             refined_triplets = self._add_doc_node(refined_triplets)
             refined_triplets = self.decompose_triplets(refined_triplets) #This should always be called after adding the doc node as it assumes 4 entities per tuple
