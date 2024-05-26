@@ -99,7 +99,7 @@ class TripletGenerator:
     
     def _extract_triplets(self):
         triplet_results = []
-        self.template = f"""Task:Given the entities {self.named_entities}, generate triplets based on it if the entity exists in the passage. if it does not exist, reply with 'None'. For each triplet, mention the text from which the triplet was extracted
+        self.template = f"""Task:Given the entities {self.named_entities}, loop across each of the entities. If triplets can be generated on the urrent entity, generate them. If the entitiy does not exist in the text, reply with 'None'. For each triplet, mention the text from which the triplet was extracted
             ###Instructions:
             The triplet should be in the format (<subject>, <relation type>, <object>), where the subject must be one of the entities in {self.named_entities}.
             The object should refer to a specific entity.
@@ -119,10 +119,17 @@ class TripletGenerator:
          
         ###The text is:
         {self.text}"""
+        print("the text is ")
+        print(self.text)
+    
+        print('the named entities are ')
+        print(self.named_entities)
+        
         response = ollama.generate(model=self.model_name, prompt=self.template)
-        print(response)
+        
         for line in response['response'].split("\n"):
             if 'None' in line:
+                print('none found in line')
                 continue
             matches = re.findall(self.pattern, line)
             matches_text = re.findall(self.pattern_text, line)
@@ -144,7 +151,9 @@ class TripletGenerator:
             refined_triplets = self.decompose_triplets(refined_triplets) #This should always be called after adding the doc node as it assumes 4 entities per tuple
             triplet_results.extend(refined_triplets)
             # triplet_results.append((subj.strip(),rel.strip(),obj.strip()))
-        
+
+        print("the triplets are")
+        print(triplet_results)
         return triplet_results
     
 
