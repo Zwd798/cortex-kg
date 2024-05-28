@@ -87,6 +87,7 @@ class TripletGenerator:
         triplets.extend(doc_triplets)
         return triplets
 
+    
     def decompose_triplets(self, triplets): #if a triplet is of the form (subject, rel1, rel2 , .. , obj, doc_node), decompose it to (subject, rel1, obj, doc_node), (subject, rel2, obj, doc_node)
         for i, t in enumerate(triplets):  #(subject, rel, rel , .. , obj, doc_node)
             if len(t[1:-2]) > 1:
@@ -97,6 +98,105 @@ class TripletGenerator:
         return triplets
 
     
+    def _extract_triplets_based_on_single_entity(self):
+        triplet_results = []
+        for en in self.named_entities:
+            self.template = f"""Task:Given the entity {en}, generate triplets for it from the text. If the entity does not exist in the text, reply with 'None'. For each triplet, mention the text from which the triplet was extracted
+                ###Instructions:
+                The triplet should be in the format (<subject>, <relation type>, <object>), where the subject must be the entity {en}.
+                The object should refer to a specific entity.
+                The relation type should refer to an action.
+                The text should be the paragraph from where the triplet was extracted. Just extract the sentence verbatim and do not make modifications
+            
+    
+             ###Example answer:
+             Entity: A
+             Text: A started liking B
+             (A, likes, B)
+    
+             Entity: X
+             Text: A started liking B
+             None
+             
+             
+            ###The text is:
+            {self.text}"""
+            print("the text is ")
+            print(self.text)
+        
+            print('the named entity is ')
+            print(en)
+            
+            response = ollama.generate(model=self.model_name, prompt=self.template)
+            
+            for line in response['response'].split("\n"):
+                if 'None' in line:
+                    print('none found in line')
+                    continue
+                matches = re.findall(self.pattern, line)
+                matches_text = re.findall(self.pattern_text, line)
+                if not matches:
+                    if matches_text:
+                        if len(triplet_results) > 1:
+                            triplet_results[-2] = triplet_results[-2] + (matches_text[0],)  #Attach text to triplet
+                    continue
+                triplet = matches[0].split(",")
+                if len(triplet) < 3:
+                    continue
+    
+                
+                subj,rel,obj = triplet[0]," ".join(triplet[1:-1]), triplet[-1]
+                subj,rel,obj = self._link_entities(subj, rel, obj)
+                refined_triplets = [(subj, rel, obj)]
+                # refined_triplets = self._add_doc_name_to_triplets(refined_triplets)
+                refined_triplets = self._add_doc_node(refined_triplets)
+                refined_triplets = self.decompose_triplets(refined_triplets) #This should always be called after adding the doc node as it assumes 4 entities per tuple
+                triplet_results.extend(refined_triplets)
+                # triplet_results.append((subj.strip(),rel.strip(),obj.strip()))
+    
+        print("the triplets are")
+        print(triplet_results)
+        return triplet_results
+
+    def _second_pass(self, triplets):
+        self.template = f"""Task:Given the entities {self.named_entities} , loop across each of the entities and generate triplets that are not in the list of triplets {triplets}. If triplets can be generated on the current entity, generate them. If the entity does not exist in the text, reply with 'None'. For each triplet, mention the text from which the triplet was extracted
+            ###Instructions:
+            The triplet should be in the format (<subject>, <relation type>, <object>), where the subject must be one of the entities in {self.named_entities}.
+            The object should refer to a specific entity.
+            The relation type should refer to an action.
+            The text should be the paragraph from where the triplet was extracted. Just extract the sentence verbatim and do not make modifications
+
+            """
+
+    def _triplet_generation(self, response):
+        triplet_results = []
+        for line in response['response'].split("\n"):
+            if 'None' in line:
+                print('none found in line')
+                continue
+            matches = re.findall(self.pattern, line)
+            matches_text = re.findall(self.pattern_text, line)
+            if not matches:
+                if matches_text:
+                    if len(triplet_results) > 1:
+                        triplet_results[-2] = triplet_results[-2] + (matches_text[0],)  #Attach text to triplet
+                continue
+            triplet = matches[0].split(",")
+            if len(triplet) < 3:
+                continue
+
+            
+            subj,rel,obj = triplet[0]," ".join(triplet[1:-1]), triplet[-1]
+            subj,rel,obj = self._link_entities(subj, rel, obj)
+            refined_triplets = [(subj, rel, obj)]
+            # refined_triplets = self._add_doc_name_to_triplets(refined_triplets)
+            refined_triplets = self._add_doc_node(refined_triplets)
+            refined_triplets = self.decompose_triplets(refined_triplets) #This should always be called after adding the doc node as it assumes 4 entities per tuple
+            triplet_results.extend(refined_triplets)
+            # triplet_results.append((subj.strip(),rel.strip(),obj.strip()))
+        return triplet_results
+        
+        
     def _extract_triplets(self):
         triplet_results = []
         self.template = f"""Task:Given the entities {self.named_entities}, loop across each of the entities. If triplets can be generated on the urrent entity, generate them. If the entitiy does not exist in the text, reply with 'None'. For each triplet, mention the text from which the triplet was extracted
@@ -127,30 +227,31 @@ class TripletGenerator:
         
         response = ollama.generate(model=self.model_name, prompt=self.template)
         
-        for line in response['response'].split("\n"):
-            if 'None' in line:
-                print('none found in line')
-                continue
-            matches = re.findall(self.pattern, line)
-            matches_text = re.findall(self.pattern_text, line)
-            if not matches:
-                if matches_text:
-                    if len(triplet_results) > 1:
-                        triplet_results[-2] = triplet_results[-2] + (matches_text[0],)  #Attach text to triplet
-                continue
-            triplet = matches[0].split(",")
-            if len(triplet) < 3:
-                continue
+        # for line in response['response'].split("\n"):
+        #     if 'None' in line:
+        #         print('none found in line')
+        #         continue
+        #     matches = re.findall(self.pattern, line)
+        #     matches_text = re.findall(self.pattern_text, line)
+        #     if not matches:
+        #         if matches_text:
+        #             if len(triplet_results) > 1:
+        #                 triplet_results[-2] = triplet_results[-2] + (matches_text[0],)  #Attach text to triplet
+        #         continue
+        #     triplet = matches[0].split(",")
+        #     if len(triplet) < 3:
+        #         continue
 
             
-            subj,rel,obj = triplet[0]," ".join(triplet[1:-1]), triplet[-1]
-            subj,rel,obj = self._link_entities(subj, rel, obj)
-            refined_triplets = [(subj, rel, obj)]
-            # refined_triplets = self._add_doc_name_to_triplets(refined_triplets)
-            refined_triplets = self._add_doc_node(refined_triplets)
-            refined_triplets = self.decompose_triplets(refined_triplets) #This should always be called after adding the doc node as it assumes 4 entities per tuple
-            triplet_results.extend(refined_triplets)
-            # triplet_results.append((subj.strip(),rel.strip(),obj.strip()))
+        #     subj,rel,obj = triplet[0]," ".join(triplet[1:-1]), triplet[-1]
+        #     subj,rel,obj = self._link_entities(subj, rel, obj)
+        #     refined_triplets = [(subj, rel, obj)]
+        #     # refined_triplets = self._add_doc_name_to_triplets(refined_triplets)
+        #     refined_triplets = self._add_doc_node(refined_triplets)
+        #     refined_triplets = self.decompose_triplets(refined_triplets) #This should always be called after adding the doc node as it assumes 4 entities per tuple
+        #     triplet_results.extend(refined_triplets)
+        #     # triplet_results.append((subj.strip(),rel.strip(),obj.strip()))
+        triplet_results = self._triplet_generation(response)
 
         print("the triplets are")
         print(triplet_results)
