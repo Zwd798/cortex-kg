@@ -77,6 +77,26 @@ class TripletGenerator:
         
         return [(w,x,y,z) for (w,x,y),z in zip(triplets,([self.doc_name] * len(triplets)))]
 
+    def _get_summary(self, triplets):
+        prompt = f"""Task:Given the text {text}, generate a summary"""
+        summary = ollama.generate(model="mistral", prompt=prompt)["response"]
+        return summary
+
+    
+    def _add_label_nodes(self, triplets, summary):
+        prompt = f"""Task:Given the text {text}, generate some labels which best classify the theme of the text"""
+        labels = ollama.generate(model="mistral", prompt=prompt)["response"]
+        pattern = r'\d+\.\s*(.+)'
+        pattern = r'\d+\.\s*(.+)'
+        matches = re.findall(pattern, labels)
+        doc_triplets = []
+        for m in matches:
+            doc_triplets.append((m, "category", self.doc_name))
+            doc_triplets.append((m, "category", summary))
+        triplets.extend(doc_triplets)
+        return triplets
+
+
     def _add_doc_node(self, triplets):
         doc_triplets = []
         # doc_name = re.sub(r'[\/]', '_', self.doc_name)
