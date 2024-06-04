@@ -3,6 +3,7 @@ from SemanticSimilarity import SemanticSimilarity
 from KeywordExtractor import KeywordExtractor
 from typing import List, Tuple, Union
 import re
+from openie import StanfordOpenIE
 
 class TripletGenerator:
 
@@ -14,6 +15,9 @@ class TripletGenerator:
         self.pattern = r"\((.*?)\)"
         self.pattern_text = r"Text:\s(.*)"
         self.model_name = "llama3"
+        self.properties = {
+    'openie.affinity_probability_cap': 2 / 3,
+}
         self.template = f"""Task:Generate triplets from the following text. For each triplet, mention the text from which the triplet was extracted
                 ###Instructions:
                 The triplet should be in the format (<subject>, <relation type>, <object>)
@@ -77,22 +81,27 @@ class TripletGenerator:
         
         return [(w,x,y,z) for (w,x,y),z in zip(triplets,([self.doc_name] * len(triplets)))]
 
-    def _get_summary(self, triplets):
-        prompt = f"""Task:Given the text {text}, generate a summary"""
+    def _get_summary(self):
+        prompt = f"""Task:Given the text {self.text}, generate a summary"""
         summary = ollama.generate(model="mistral", prompt=prompt)["response"]
+        print("The summary is")
+        print(summary)
         return summary
 
     
     def _add_label_nodes(self, triplets, summary):
-        prompt = f"""Task:Given the text {text}, generate some labels which best classify the theme of the text"""
+        prompt = f"""Task:Given the text {self.text}, generate some labels which best classify the theme of the text"""
         labels = ollama.generate(model="mistral", prompt=prompt)["response"]
         pattern = r'\d+\.\s*(.+)'
-        pattern = r'\d+\.\s*(.+)'
         matches = re.findall(pattern, labels)
+        print("The matches are")
+        print(matches)
         doc_triplets = []
         for m in matches:
             doc_triplets.append((m, "category", self.doc_name))
             doc_triplets.append((m, "category", summary))
+            doc_triplets.append((self.doc_name, "category", m)) #bidirectional
+            doc_triplets.append((summary, "category", m))
         triplets.extend(doc_triplets)
         return triplets
 
@@ -229,38 +238,29 @@ class TripletGenerator:
         return triplets
         
     def _extract_triplets(self):
-        self.template = f"""Task:Given the entities {self.named_entities}, loop across each of the entities. If triplets can be generated on the urrent entity, generate them. If the entitiy does not exist in the text, reply with 'None'. For each triplet, mention the text from which the triplet was extracted
-            ###Instructions:
-            The triplet should be in the format (<subject>, <relation type>, <object>), where the subject must be one of the entities in {self.named_entities}.
-            The object should refer to a specific entity.
-            The relation type should refer to an action.
-            The text should be the paragraph from where the triplet was extracted. Just extract the sentence verbatim and do not make modifications
+        triplet_results = []
         
-
-         ###Example answer:
-         Entity: A
-         Text: A started liking B
-         (A, likes, B)
-
-         Entity: X
-         Text: A started liking B
-         None
-         
-         
-        ###The text is:
-        {self.text}"""
+        with StanfordOpenIE(properties=self.properties) as client:
+            # with open('/home/niamatzawad/niamatzawad/Datasets/HotpotQA/hotpot_1/row_0.txt', encoding='utf8') as r:
+            #     corpus = r.read().replace('\n', ' ').replace('\r', '')
+            triples_corpus = client.annotate(self.text)
+            print('Corpus: %s [...].' % self.text[0:80])
+            print('Found %s triples in the corpus.' % len(triples_corpus))
+            for triple in triples_corpus:
+                triplet_results.append((triple["subject"], triple["relation"], triple["object"]))
+            print('[...]')
+        
         print("the text is ")
         print(self.text)
     
         print('the named entities are ')
         print(self.named_entities)
-        
-        response = ollama.generate(model=self.model_name, prompt=self.template)
-        
-        triplet_results = self._triplet_generation(response)
-        triplet_results = self._extract_triplets_second_pass(triplet_results)
+                
+        summary = self._get_summary()
+        self._add_label_nodes(triplet_results,summary)
         print("the triplets are")
         print(triplet_results)
+        
         return triplet_results
     
 

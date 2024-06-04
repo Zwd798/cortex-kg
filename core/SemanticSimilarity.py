@@ -10,7 +10,12 @@ class SemanticSimilarity():
         self.disambiguated_reference_list = []
         self.rels = []
         self.embedded_rels = []
+        self.label_to_embedding = {}
 
+        self.triplet_sentence_reference_list  = []
+        self.triplet_sentence_embeddings  = []
+
+    
     def generate_reference_without_disambiguation(self, reference_list):
         embed_ref = self._populate_embedded_reference(reference_list)
         self.disambiguated_reference_list, self.embedded_reference = reference_list, embed_ref  
@@ -28,6 +33,13 @@ class SemanticSimilarity():
         
     def _get_embedding_token(self, phrase):
         return self.model.encode([phrase])[0]
+
+    def generate_label_embedding(self, labels):
+        for l in labels:
+            self.label_to_embedding[l] = self._get_embedding_token(l)
+    
+    def generate_summary_embedding(self, summary):
+        return self._get_embedding_token(summary)
         
     def _cosine(self, u, v) -> float:
         return np.dot(u, v) / (np.linalg.norm(u) * np.linalg.norm(v))
@@ -115,3 +127,12 @@ class SemanticSimilarity():
             i += 1
 
         return dissimilar, dissimilar_embedded
+
+    def _disambiguate_triplets(self, triplets):
+        triplet_sentences = []
+        for t in triplets:
+            sen = " ".join(t) 
+            
+            
+
+    
