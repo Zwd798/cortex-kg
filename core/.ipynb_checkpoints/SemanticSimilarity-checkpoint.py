@@ -12,6 +12,10 @@ class SemanticSimilarity():
         self.embedded_rels = []
         self.label_to_embedding = {}
 
+        self.triplet_sentence_reference_list  = []
+        self.triplet_sentence_embeddings  = []
+
+    
     def generate_reference_without_disambiguation(self, reference_list):
         embed_ref = self._populate_embedded_reference(reference_list)
         self.disambiguated_reference_list, self.embedded_reference = reference_list, embed_ref  
@@ -111,7 +115,7 @@ class SemanticSimilarity():
         similarity_scores = self._get_all_similarity_scores(embedded_reference_list)
         dissimilar,dissimilar_embedded, ignore = [],[],[]
         i = 0
-        while i < len(similarity_scores):
+        while i < (similarity_scores.shape[0]):
             if i not in ignore:
                 current = similarity_scores[i]
                 max_score_indices = self._get_similar_entities(i, current)
@@ -125,7 +129,10 @@ class SemanticSimilarity():
         return dissimilar, dissimilar_embedded
 
     def _disambiguate_triplets(self, triplets):
+        triplet_sentences = []
         for t in triplets:
+            sen = " ".join(t) 
+            
             
 
     

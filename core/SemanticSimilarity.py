@@ -115,7 +115,7 @@ class SemanticSimilarity():
         similarity_scores = self._get_all_similarity_scores(embedded_reference_list)
         dissimilar,dissimilar_embedded, ignore = [],[],[]
         i = 0
-        while i < len(similarity_scores):
+        while i < (similarity_scores.shape[0]):
             if i not in ignore:
                 current = similarity_scores[i]
                 max_score_indices = self._get_similar_entities(i, current)

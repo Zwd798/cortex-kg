@@ -239,7 +239,7 @@ class TripletGenerator:
         
     def _extract_triplets(self):
         triplet_results = []
-        
+            
         with StanfordOpenIE(properties=self.properties) as client:
             # with open('/home/niamatzawad/niamatzawad/Datasets/HotpotQA/hotpot_1/row_0.txt', encoding='utf8') as r:
             #     corpus = r.read().replace('\n', ' ').replace('\r', '')
@@ -263,7 +263,13 @@ class TripletGenerator:
         
         return triplet_results
     
-
+    # def disambiguate_triplets(self, triplets):
+    #     visited_subjects = 
+    #     for t in triplets:
+    #         s,r,o = t
+    #         if s in triplets:
+                
+            
         
     def get_triplets(self):
         return self.triplets

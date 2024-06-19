@@ -119,6 +119,16 @@ class Search:
             
         return all_texts
 
+    def _generate_query_label_nodes(self, query):
+        prompt = f"""Task:Given the text {query}, generate some labels which best classify the theme of the text"""
+        labels = ollama.generate(model="mistral", prompt=prompt)["response"]
+        pattern = r'\d+\.\s*(.+)'
+        matches = re.findall(pattern, labels)
+        doc_triplets = []
+        all_labels = [m for m in matches]
+        doc_triplets.extend(all_labels)
+        return doc_triplets
+
     def find_relevant_segment_from_text(self, question, all_texts):
         i = 0
         relevant_segments = []
@@ -134,6 +144,38 @@ class Search:
                     relevant_segments.append(splitted_text)
                 i += self.window_size
         return relevant_segments
+        
+    def get_label_relevant_entities(self, query):
+        labels = self._generate_query_label_nodes(query)
+        x = []
+        for l in labels:
+            x.extend(self.s.get_most_similar_entities(l))
+        return list(set(x))
+        
+    def get_spliced_triplets(self, entity):
+        nodes = self.graph.run(f"MATCH p=(n:`{entity}`)-[r]-(m) RETURN n['id'] as source,type(r) as relation,m['id'] as object LIMIT 25")
+        return [n["source"] + " " + n["relation"] + " " + n["object"] for n in nodes]
+
+    def get_all_connected_entities(self, entity):
+        nodes = self.graph.run(f"MATCH p=(n:`{entity}`)-[r]-(m) RETURN m['id'] as object LIMIT 25").data()
+        return [n["object"] for n in nodes]
+               
+    def get_all_relations(self, entity):
+        nodes = self.graph.run(f"MATCH p=(n:`{entity}`)-[r]-(m) RETURN type(r) as relation LIMIT 25").data()
+        return [n["relation"] for n in nodes]
+
+    #main function to retrieve relations
+    def get_label_relevant_triplets(self, query):
+        labels = self.get_label_relevant_entities(query)
+        print(labels)
+        relations = []
+        for l in labels:
+            relations.extend(self.get_spliced_triplets(l))
+        return list(set(relations))
+    
+    def retrieve_summary(self, label):
+        nodes = self.graph.run(f"MATCH (n:`{label}`)-[r:category]->(m) RETURN n['id'] as source, m['id'] as object").data()
+        return [n["object"] for n in nodes]
 
     
     def get_answers(self, question):

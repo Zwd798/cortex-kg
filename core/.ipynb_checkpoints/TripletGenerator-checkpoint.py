@@ -92,8 +92,6 @@ class TripletGenerator:
     def _add_label_nodes(self, triplets, summary):
         prompt = f"""Task:Given the text {self.text}, generate some labels which best classify the theme of the text"""
         labels = ollama.generate(model="mistral", prompt=prompt)["response"]
-        print("The labels are")
-        print(labels)
         pattern = r'\d+\.\s*(.+)'
         matches = re.findall(pattern, labels)
         print("The matches are")
@@ -265,7 +263,13 @@ class TripletGenerator:
         
         return triplet_results
     
-
+    # def disambiguate_triplets(self, triplets):
+    #     visited_subjects = 
+    #     for t in triplets:
+    #         s,r,o = t
+    #         if s in triplets:
+                
+            
         
     def get_triplets(self):
         return self.triplets
