@@ -102,6 +102,7 @@ class TripletGenerator:
             doc_triplets.append((m, "category", summary))
             doc_triplets.append((self.doc_name, "category", m)) #bidirectional
             doc_triplets.append((summary, "category", m))
+        
         triplets.extend(doc_triplets)
         return triplets
 
@@ -257,6 +258,9 @@ class TripletGenerator:
         print(self.named_entities)
                 
         summary = self._get_summary()
+
+        triplet_results.extend([(summary, "component", t[0]) for t in triplet_results]) #Add link between summary and triplets
+        
         self._add_label_nodes(triplet_results,summary)
         print("the triplets are")
         print(triplet_results)
