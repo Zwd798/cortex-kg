@@ -167,10 +167,10 @@ class Search:
     #main function to retrieve relations
     def get_label_relevant_triplets(self, query):
         labels = self.get_label_relevant_entities(query)
-        print(labels)
         relations = []
         for l in labels:
-            relations.extend(self.get_spliced_triplets(l))
+            relations.extend(self.get_spliced_triplets(l))        
+         
         return list(set(relations))
     
     def retrieve_summary(self, label):
