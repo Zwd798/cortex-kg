@@ -151,6 +151,15 @@ class Search:
         for l in labels:
             x.extend(self.s.get_most_similar_entities(l))
         return list(set(x))
+
+    def get_component_nodes(self, labels):
+        components = []
+        for l in labels:
+            summaries_and_text = self.graph.run(f"MATCH p=(n:`{l}`)-[r:category]-(m) RETURN n['id'] as source,type(r) as relation,m['id'] as object")
+            for n in summaries_and_text:
+                nodes = self.graph.run(f"MATCH p=(n:`{n["object"]}`)-[r:component]-(m) RETURN n['id'] as source,type(r) as relation,m['id'] as object LIMIT 25")
+                components.extend([n["object"] for n in nodes if n])
+        return components
         
     def get_spliced_triplets(self, entity):
         nodes = self.graph.run(f"MATCH p=(n:`{entity}`)-[r]-(m) RETURN n['id'] as source,type(r) as relation,m['id'] as object LIMIT 25")
